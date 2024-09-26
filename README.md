@@ -1,8 +1,7 @@
-# Expense Tracker App
+# My Expense Tracker
 
 An Android Expense Tracker application built using **Jetpack Compose**, **MVVM architecture**, and **Hilt** for dependency injection. 
 The app helps users track their expenses, view statistics, and add new expenses seamlessly with a smooth and intuitive UI.
-## Screenshots
 
 ![](https://github.com/user-attachments/assets/67aafe82-de0d-416a-95cc-f91703c03903)
 
