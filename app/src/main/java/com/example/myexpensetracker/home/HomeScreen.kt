@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -88,7 +89,7 @@ fun HomeScreen(navController: NavController) {
     val currencyState = viewModel.selectedCurrency
     val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold (
+    Scaffold(
         containerColor = Color.White,
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -98,11 +99,12 @@ fun HomeScreen(navController: NavController) {
         floatingActionButton = {
             Box(
                 modifier = Modifier
-                    .background(Brush.horizontalGradient(listOf(Purple, Blue)),
+                    .background(
+                        Brush.horizontalGradient(listOf(Purple, Blue)),
                         RoundedCornerShape(16.dp)
                     )
             ) {
-                AnimatedVisibility(visible = true){
+                AnimatedVisibility(visible = true) {
                     FloatingActionButton(
                         onClick = {
                             navController.navigate("add")
@@ -120,7 +122,7 @@ fun HomeScreen(navController: NavController) {
                 }
             }
         }
-    ){
+    ) {
         ConstraintLayout(
             modifier = Modifier
                 .padding(it)
@@ -269,13 +271,9 @@ fun HomeScreen(navController: NavController) {
                         bottom.linkTo(parent.bottom)
                         height = Dimension.fillToConstraints
                     }) {
-                    Image(
-                        painter = painterResource(id = R.drawable.empty),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(bottom = 16.dp)
-                            .size(250.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Purple
                     )
                 }
             }
