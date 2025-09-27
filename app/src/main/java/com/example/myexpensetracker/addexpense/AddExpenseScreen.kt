@@ -40,7 +40,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,7 +59,6 @@ import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.myexpensetracker.data.model.ExpenseEntity
 import com.example.myexpensetracker.ui.theme.Blue
 import com.example.myexpensetracker.ui.theme.MyExpenseTrackerTheme
 import com.example.myexpensetracker.ui.theme.Purple
@@ -97,14 +95,15 @@ fun AddExpense(
                     end.linkTo(parent.end)
                 }
         )
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 38.dp, start = 16.dp, end = 16.dp)
-            .constrainAs(nameRow) {
-                top.linkTo(parent.top)
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-            }) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 38.dp, start = 16.dp, end = 16.dp)
+                .constrainAs(nameRow) {
+                    top.linkTo(parent.top)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                }) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -142,7 +141,7 @@ fun AddExpense(
                 },
             onAddExpense = {
                 coroutineScope.launch {
-                    viewModel.addExpense(it)
+                    viewModel.addExpense()
                     navController.popBackStack()
                 }
             }
@@ -151,16 +150,12 @@ fun AddExpense(
 }
 
 @Composable
-fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Unit) {
-    val name = rememberSaveable{ mutableStateOf("") }
-    val amount = rememberSaveable { mutableStateOf("") }
-    val category = rememberSaveable { mutableStateOf("Upwork") }
-    val type = rememberSaveable { mutableStateOf("Income") }
-    val currency = rememberSaveable { mutableStateOf("USD") }
-    val date = rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+fun DataFormCard(modifier: Modifier, onAddExpense: () -> Unit) {
+
+
     val dateDialogVisible = remember { mutableStateOf(false) }
     val expanded = remember { mutableStateOf(false) }
-
+    val viewModel: AddExpenseViewModel = hiltViewModel()
     val nameError = rememberSaveable { mutableStateOf("") }
     val amountError = rememberSaveable { mutableStateOf("") }
 
@@ -207,10 +202,9 @@ fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Uni
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(text = "NAME", fontSize = 14.sp, color = Color.Gray)
                 OutlinedTextField(
-                    value = name.value,
+                    value = viewModel.name,
                     onValueChange = {
-                        name.value = it
-                        nameError.value = ""
+                        viewModel.onNameChanged(it)
                     },
                     singleLine = true,
                     modifier = Modifier
@@ -243,19 +237,21 @@ fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Uni
                         "Paypal",
                         "Google Pay",
                         "Mastercard",
+                        "Salary",
                         "Other"
                     ),
-                    onCategorySelected = { category.value = it },
+                    onCategorySelected = {
+                        viewModel.onCategoryChanged(it)
+                    },
                     color = Color.Unspecified
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(text = "AMOUNT", fontSize = 14.sp, color = Color.Gray)
                 OutlinedTextField(
-                    value = amount.value,
+                    value = viewModel.amount,
                     onValueChange = {
-                        amount.value = it
-                        amountError.value = ""
+                        viewModel.onAmountChanged(it)
                     },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -273,10 +269,12 @@ fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Uni
                                 modifier = Modifier.wrapContentSize()
                             ) {
                                 Text(
-                                    text = currency.value,
+                                    text = viewModel.currency,
                                     modifier = Modifier
                                         .padding(end = 8.dp)
-                                        .clickable { expanded.value = true }
+                                        .clickable {
+                                            expanded.value = true
+                                        }
                                 )
                             }
                         }
@@ -294,8 +292,12 @@ fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Uni
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(text = "DATE", fontSize = 14.sp, color = Color.Gray)
                 OutlinedTextField(
-                    value = Utils.formatDateForCalender(date.longValue),
-                    onValueChange = {},
+                    value = Utils.formatDateForCalender(
+                        viewModel.date.toLong()
+                    ),
+                    onValueChange = {
+                        viewModel.onDateChanged(it)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.White)
@@ -304,7 +306,9 @@ fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Uni
                             Brush.horizontalGradient(listOf(Purple, Blue)),
                             shape = RoundedCornerShape(4.dp)
                         )
-                        .clickable { dateDialogVisible.value = true },
+                        .clickable {
+                            dateDialogVisible.value = true
+                        },
                     enabled = false,
                     colors = textFieldColors,
                 )
@@ -314,7 +318,9 @@ fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Uni
                 Text(text = "TYPE", fontSize = 14.sp, color = Color.Gray)
                 CategoryDropDown(
                     categories = listOf("Income", "Expense"),
-                    onCategorySelected = { type.value = it },
+                    onCategorySelected = {
+                        viewModel.onTypeChanged(it)
+                    },
                     color = Color.Black
                 )
 
@@ -322,36 +328,23 @@ fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Uni
                 Button(
                     onClick = {
                         var valid = true
-                        if (name.value.isEmpty()) {
+                        if (viewModel.name.isEmpty()) {
                             nameError.value = "*name is required"
                             valid = false
-                        } else if (amount.value.isEmpty()) {
+                        } else if (viewModel.amount.isEmpty()) {
                             amountError.value = "*amount is required"
                             valid = false
                         } else {
-                            val amountValue = amount.value.toDoubleOrNull()
+                            val amountValue = viewModel.amount.toDoubleOrNull()
                             if (amountValue == null) {
                                 amountError.value = "Invalid amount"
                                 valid = false
                             }
                         }
                         if (valid) {
-                            onAddExpense(
-                                ExpenseEntity(
-                                    id = 0,
-                                    title = name.value,
-                                    amount = amount.value.toDouble(),
-                                    category = category.value,
-                                    type = type.value,
-                                    date = date.longValue.toString()
-                                )
-                            )
-                            name.value = ""
-                            amount.value = ""
-                            category.value = "Upwork"
-                            type.value = "Income"
-                            currency.value = "USD"
-                            date.longValue = System.currentTimeMillis()
+                            onAddExpense()
+                            nameError.value = ""
+                            amountError.value = ""
                         }
                     },
                     modifier = Modifier
@@ -393,7 +386,7 @@ fun DataFormCard(modifier: Modifier, onAddExpense: (model: ExpenseEntity) -> Uni
                     )
                     .clip(RoundedCornerShape(16.dp)),
                 onDateSelected = {
-                    date.value = it
+                    viewModel.onDateChanged(it.toString())
                     dateDialogVisible.value = false
                 }, onDismissRequest = {
                     dateDialogVisible.value = false
@@ -522,6 +515,7 @@ fun CategoryDropDown(
             value = selectedCategory.value,
             onValueChange = {
                 selectedCategory.value = it
+                viewModel.onCategoryChanged(it)
             },
             readOnly = true,
             modifier = Modifier
@@ -568,7 +562,9 @@ fun CategoryDropDown(
                     text = { Text(it, color = Color.Black) },
                     onClick = {
                         selectedCategory.value = it
-                        onCategorySelected(selectedCategory.value)
+                        onCategorySelected(
+                            selectedCategory.value
+                        )
                         expanded.value = false
                     },
                     colors = MenuItemColors(

@@ -42,7 +42,6 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +51,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -78,7 +76,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.sql.Time
-import java.text.SimpleDateFormat
 
 @Composable
 fun HomeScreen(navController: NavController) {
@@ -87,12 +84,12 @@ fun HomeScreen(navController: NavController) {
     val name by remember(userViewModel.name) { mutableStateOf(userViewModel.name) }
     val expanded = remember { mutableStateOf(false) }
     val currencyState = viewModel.selectedCurrency
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackBarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         containerColor = Color.White,
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
+            SnackbarHost(hostState = snackBarHostState)
         },
 
         floatingActionButtonPosition = FabPosition.End,
@@ -225,56 +222,73 @@ fun HomeScreen(navController: NavController) {
                             })
                     }
                 }
+
             }
 
-            val state = viewModel.expenses.collectAsState(initial = emptyList())
-            val expense = viewModel.getExpense(state.value)
-            val income = viewModel.getIncome(state.value)
-            val balance = viewModel.getBalance(state.value)
+            val state by viewModel.uiState.collectAsState()
+            when (state) {
+                is ExpensesUiState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Purple)
+                    }
+                }
 
-            DetailCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 42.dp, start = 16.dp, end = 16.dp)
-                    .constrainAs(card) {
-                        top.linkTo(nameRow.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    },
-                balance = balance,
-                expense = expense,
-                income = income
-            )
+                is ExpensesUiState.Success -> {
+                    val expenses = (state as ExpensesUiState.Success).expenses
+                    val expense = viewModel.getExpense(expenses)
+                    val income = viewModel.getIncome(expenses)
+                    val balance = viewModel.getBalance(expenses)
 
-            if (state.value.isNotEmpty()) {
-                TransactionList(
-                    modifier = Modifier.constrainAs(list) {
-                        top.linkTo(card.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        bottom.linkTo(parent.bottom)
-                        height = Dimension.fillToConstraints
-                    },
-                    list = state.value,
-                    viewModel = viewModel,
-                    currency = currencyState.value,
-                    snackbarHostState = snackbarHostState
-                )
-            } else {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
-                    .constrainAs(list) {
-                        top.linkTo(card.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        bottom.linkTo(parent.bottom)
-                        height = Dimension.fillToConstraints
-                    }) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Purple
+                    DetailCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 42.dp, start = 16.dp, end = 16.dp)
+                            .constrainAs(card) {
+                                top.linkTo(nameRow.bottom)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                            },
+                        balance = balance,
+                        expense = expense,
+                        income = income
                     )
+                    TransactionList(
+                        modifier = Modifier.constrainAs(list) {
+                            top.linkTo(card.bottom)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            bottom.linkTo(parent.bottom)
+                            height = Dimension.fillToConstraints
+                        },
+                        list = expenses,
+                        viewModel = viewModel,
+                        currency = currencyState.value,
+                        snackbarHostState = snackBarHostState
+                    )
+                }
+
+                is ExpensesUiState.Error -> {
+                    Box(
+                        modifier = Modifier
+                            .constrainAs(list) {
+                                top.linkTo(card.bottom)
+                                start.linkTo(parent.start)
+                                end.linkTo(parent.end)
+                                bottom.linkTo(parent.bottom)
+                                height = Dimension.fillToConstraints
+                            }
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Failed to load data",
+                            color = Color.Red
+                        )
+                    }
+
                 }
             }
 
@@ -566,6 +580,11 @@ fun TransactionItem(
     )
 }
 
+sealed class ExpensesUiState {
+    object Loading : ExpensesUiState()
+    data class Success(val expenses: List<ExpenseEntity>) : ExpensesUiState()
+    data class Error(val message: String) : ExpensesUiState()
+}
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

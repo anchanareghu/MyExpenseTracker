@@ -7,14 +7,34 @@ import com.example.myexpensetracker.R
 import com.example.myexpensetracker.data.dao.ExpenseTrackerDao
 import com.example.myexpensetracker.data.model.ExpenseEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(private val expenseDao: ExpenseTrackerDao) : ViewModel() {
-    val expenses = expenseDao.getAllExpenses()
+class HomeViewModel @Inject constructor(
+    private val expenseDao: ExpenseTrackerDao
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow<ExpensesUiState>(ExpensesUiState.Loading)
+    val uiState: StateFlow<ExpensesUiState> = _uiState.asStateFlow()
+
     val selectedCurrency = mutableStateOf("USD")
 
+    init {
+        viewModelScope.launch {
+            expenseDao.getAllExpenses()
+                .catch { e ->
+                    _uiState.value = ExpensesUiState.Error(e.message ?: "Unknown error")
+                }
+                .collect { list ->
+                    _uiState.value = ExpensesUiState.Success(list)
+                }
+        }
+    }
     fun getBalance(list: List<ExpenseEntity>): String {
         var totalIncome = 0.0
         var currencySymbol = ""
