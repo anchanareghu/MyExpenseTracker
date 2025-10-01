@@ -3,6 +3,7 @@ package com.example.myexpensetracker.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -415,6 +417,16 @@ fun TransactionList(
     currency: String,
     snackBarHostState: SnackbarHostState
 ) {
+    var isAscending by remember { mutableStateOf(true) }
+
+    val sortedList = remember(list, isAscending) {
+        if (isAscending) {
+            list.sortedBy { it.date }
+        } else {
+            list.sortedByDescending { it.date }
+        }
+    }
+
     Column(
         modifier = modifier
             .padding(horizontal = 16.dp)
@@ -428,11 +440,24 @@ fun TransactionList(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.CenterStart)
             )
+
+            Icon(
+                painter = painterResource(
+                    id = if (isAscending) R.drawable.increasing else R.drawable.decreasing
+                ),
+                contentDescription = if (isAscending) "Sort ascending" else "Sort descending",
+                tint = PurpleGrey40,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(20.dp)
+                    .clickable { isAscending = !isAscending }
+            )
         }
+
         Spacer(modifier = Modifier.height(18.dp))
 
-        if (list.isEmpty()) {
-            // Show empty image and message
+        if (sortedList.isEmpty()) {
+            // Show empty state
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -457,7 +482,7 @@ fun TransactionList(
             LazyColumn(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(list) { item ->
+                items(sortedList) { item ->
                     TransactionItem(
                         item = item,
                         onRemove = { removedItem ->
@@ -476,6 +501,7 @@ fun TransactionList(
         }
     }
 }
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
