@@ -91,7 +91,8 @@ class HomeViewModel @Inject constructor(
             "Upwork" -> R.drawable.upwork
             "Google Pay" -> R.drawable.google_pay
             "Mastercard" -> R.drawable.mastercard
-            "Other" -> R.drawable.food
+            "Salary" -> R.drawable.salary
+            "Other" -> R.drawable.shopping
             else -> {
                 if (item.title == "Food" || item.title == "Lunch" || item.title == "Dinner" || item.title == "Snacks" || item.title == "Drinks") {
                     R.drawable.food

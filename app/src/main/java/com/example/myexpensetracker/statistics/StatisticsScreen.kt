@@ -4,7 +4,6 @@ import android.view.LayoutInflater
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,8 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -22,6 +20,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,18 +49,21 @@ import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
 import kotlin.math.roundToInt
+import androidx.core.graphics.toColorInt
+import com.example.myexpensetracker.data.model.ExpenseEntity
+import com.example.myexpensetracker.data.model.ExpenseSummary
+import com.example.myexpensetracker.ui.theme.Purple
 
 @Composable
 fun StatisticsScreen(navController: NavController) {
     val viewModel: StatisticsViewModel = hiltViewModel()
     val homeScreenViewModel: HomeViewModel = hiltViewModel()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackBarHostState = remember { SnackbarHostState() }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         containerColor = Color.White,
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
-        },
+        snackbarHost = { SnackbarHost(hostState = snackBarHostState) },
         topBar = {
             Box(
                 modifier = Modifier
@@ -77,63 +80,85 @@ fun StatisticsScreen(navController: NavController) {
                     )
                 }
                 Text(
-                    text = "Statistics",
+                    text = "Your Expense Statistics",
                     fontSize = 16.sp,
                     color = Color.DarkGray,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.align(Alignment.Center)
                 )
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                )
             }
         }
-    ) {
-        val expenses = viewModel.entries.collectAsState(initial = emptyList())
-        val topExpenses = viewModel.topEntries.collectAsState(initial = emptyList())
-        val entries = viewModel.getEntriesForChart(expenses.value)
-
-        if (topExpenses.value.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .padding(it)
-            ) {
-                Box(Modifier.padding(16.dp)) {
-                    LineChart(entries)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                TransactionList(
-                    modifier = Modifier,
-                    title = "Top Expenses",
-                    list = topExpenses.value,
-                    currency = "USD",
-                    viewModel = homeScreenViewModel,
-                    snackbarHostState = snackbarHostState
-                )
-
-            }
-        } else {
-            Box(
-                Modifier
-                    .padding(it)
-                    .fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.empty),
-                    contentDescription = null,
+    ) { paddingValues ->
+        when (uiState) {
+            is StatisticsUiState.Loading -> {
+                Box(
                     modifier = Modifier
-                        .padding(bottom = 16.dp)
-                        .size(250.dp)
-                )
+                        .padding(paddingValues)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Purple)
+                }
+            }
+
+            is StatisticsUiState.Success -> {
+                val state = uiState as StatisticsUiState.Success
+                val entries = viewModel.getEntriesForChart(state.entries)
+
+                Column(
+                    modifier = Modifier.padding(paddingValues)
+                ) {
+                    Box(Modifier.padding(16.dp)) {
+                        LineChart(entries)
+                    }
+                    TransactionList(
+                        modifier = Modifier,
+                        title = "Top Expenses",
+                        list = state.topEntries,
+                        currency = "USD",
+                        viewModel = homeScreenViewModel,
+                        snackBarHostState = snackBarHostState
+                    )
+                }
+            }
+
+            is StatisticsUiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Image(
+                            painter = painterResource(id = R.drawable.empty),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(bottom = 16.dp)
+                                .size(250.dp)
+                        )
+                        Text(
+                            text = (uiState as StatisticsUiState.Error).message,
+                            color = Color.Gray,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+
+sealed interface StatisticsUiState {
+    object Loading : StatisticsUiState
+    data class Success(
+        val entries: List<ExpenseSummary>,
+        val topEntries: List<ExpenseEntity>
+    ) : StatisticsUiState
+    data class Error(val message: String) : StatisticsUiState
+}
 
 @Composable
 fun LineChart(
@@ -154,7 +179,7 @@ fun LineChart(
         ) { view ->
 
             val dataSet = LineDataSet(entries, "Expenses").apply {
-                color = android.graphics.Color.parseColor("#CFDEF3")
+                color = "#CFDEF3".toColorInt()
                 valueTextColor = android.graphics.Color.BLACK
                 lineWidth = 3f
                 axisDependency = YAxis.AxisDependency.RIGHT
@@ -169,7 +194,7 @@ fun LineChart(
                 }
 
                 setDrawCircles(true)
-                setCircleColor(android.graphics.Color.parseColor("#CFDEF3"))
+                setCircleColor("#CFDEF3".toColorInt())
                 circleRadius = 2f
                 circleHoleColor = android.graphics.Color.WHITE
 
@@ -192,6 +217,7 @@ fun LineChart(
                 isGranularityEnabled = true
                 setLabelCount(5, true)
                 position = XAxis.XAxisPosition.BOTTOM
+                setAvoidFirstLastClipping(true)
             }
 
             lineChart.data = LineData(dataSet)
@@ -201,6 +227,8 @@ fun LineChart(
             lineChart.axisLeft.setDrawGridLines(false)
             lineChart.xAxis.setDrawGridLines(false)
             lineChart.xAxis.setDrawAxisLine(false)
+            lineChart.extraBottomOffset = 16f
+            lineChart.description.isEnabled = false
             lineChart.invalidate()
         }
     }

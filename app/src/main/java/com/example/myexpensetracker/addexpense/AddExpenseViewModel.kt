@@ -66,7 +66,7 @@ class AddExpenseViewModel @Inject constructor(
             "Google Pay" -> R.drawable.google_pay
             "Mastercard" -> R.drawable.mastercard
             "Salary" -> R.drawable.salary
-            "Other" -> R.drawable.food
+            "Other" -> R.drawable.shopping
             else -> when (type) {
                 "Income" -> R.drawable.income
                 else -> R.drawable.expenses

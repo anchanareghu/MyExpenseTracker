@@ -266,7 +266,7 @@ fun HomeScreen(navController: NavController) {
                         list = expenses,
                         viewModel = viewModel,
                         currency = currencyState.value,
-                        snackbarHostState = snackBarHostState
+                        snackBarHostState = snackBarHostState
                     )
                 }
 
@@ -408,12 +408,12 @@ fun CardRowItem(modifier: Modifier, title: String, amount: String, icon: Int) {
 
 @Composable
 fun TransactionList(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     list: List<ExpenseEntity>,
     viewModel: HomeViewModel,
     title: String = "Recent Transactions",
     currency: String,
-    snackbarHostState: SnackbarHostState
+    snackBarHostState: SnackbarHostState
 ) {
     Column(
         modifier = modifier
@@ -431,27 +431,52 @@ fun TransactionList(
         }
         Spacer(modifier = Modifier.height(18.dp))
 
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(list) { item ->
-                TransactionItem(
-                    item = item,
-                    onRemove = { removedItem ->
-                        viewModel.removeItem(removedItem)
-                    },
-                    onUndo = { removedItem ->
-                        viewModel.addItem(removedItem)
-                    },
-                    icon = viewModel.getItemIcon(item, item.type),
-                    color = if (item.type == "Income") Green else Red,
-                    currency = currency,
-                    snackbarHostState = snackbarHostState
+        if (list.isEmpty()) {
+            // Show empty image and message
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.empty),
+                    contentDescription = "No transactions",
+                    modifier = Modifier
+                        .size(150.dp)
+                        .padding(bottom = 16.dp)
                 )
+                Text(
+                    text = "No transactions yet",
+                    color = Color.Gray,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(list) { item ->
+                    TransactionItem(
+                        item = item,
+                        onRemove = { removedItem ->
+                            viewModel.removeItem(removedItem)
+                        },
+                        onUndo = { removedItem ->
+                            viewModel.addItem(removedItem)
+                        },
+                        icon = viewModel.getItemIcon(item, item.type),
+                        color = if (item.type == "Income") Green else Red,
+                        currency = currency,
+                        snackBarHostState = snackBarHostState
+                    )
+                }
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -488,7 +513,7 @@ fun TransactionItem(
     icon: Int,
     color: Color,
     currency: String,
-    snackbarHostState: SnackbarHostState
+    snackBarHostState: SnackbarHostState
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -496,7 +521,7 @@ fun TransactionItem(
                 SwipeToDismissBoxValue.StartToEnd -> {
                     onRemove(item)
                     CoroutineScope(Dispatchers.Main).launch {
-                        snackbarHostState.showSnackbar(
+                        snackBarHostState.showSnackbar(
                             message = "Transaction deleted",
                             actionLabel = "Undo"
                         ).let {
@@ -610,7 +635,7 @@ fun TransactionItemPreview() {
         icon = R.drawable.netflix,
         color = Color.Red,
         currency = "USD",
-        snackbarHostState = SnackbarHostState()
+        snackBarHostState = SnackbarHostState()
     )
 }
 
